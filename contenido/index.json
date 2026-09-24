@@ -1,0 +1,12 @@
+{
+ "packs": [
+  {
+   "id": "divina-comedia",
+   "titulo": "La Divina Comedia",
+   "autor": "Dante Alighieri",
+   "descripcion": "Un canto al día. 100 cantos: Infierno, Purgatorio y Paraíso. Traducción de Manuel Aranda y Sanjuán (1868).",
+   "unidad": "canto",
+   "total": 100
+  }
+ ]
+}
