@@ -14,13 +14,26 @@ const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // Marcadores [n] de nota al pie -> superíndice enlazado a la nota.
 const conNotas = (html) => html.replace(/\[(\d+)\]/g, (_, n) => `<sup class="nota-ref"><a href="#nota-${n}" data-nota="${n}">${n}</a></sup>`);
 
-function anillo(pct, texto) {
-  const r = 30, c = 2 * Math.PI * r;
-  return `<div class="anillo">
-    <svg viewBox="0 0 74 74"><defs><linearGradient id="gradOro" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--oro)"/><stop offset="1" stop-color="var(--oro-2)"/></linearGradient></defs>
-      <circle class="anillo__fondo" cx="37" cy="37" r="${r}"/>
-      <circle class="anillo__valor" cx="37" cy="37" r="${r}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-final="${c * (1 - pct)}"/>
-    </svg><div class="anillo__centro">${texto}</div></div>`;
+// tam=74 (aro grande, con número en el centro) o más pequeño para usarlo como icono de fila
+// (sin `texto`, p. ej. en el panel compacto de "Hoy").
+function anillo(pct, texto, tam = 74) {
+  const grosor = tam < 50 ? 4 : 7;
+  const r = tam / 2 - grosor, c = 2 * Math.PI * r;
+  return `<div class="anillo" style="width:${tam}px;height:${tam}px">
+    <svg viewBox="0 0 ${tam} ${tam}"><defs><linearGradient id="gradOro" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--oro)"/><stop offset="1" stop-color="var(--oro-2)"/></linearGradient></defs>
+      <circle class="anillo__fondo" cx="${tam / 2}" cy="${tam / 2}" r="${r}" stroke-width="${grosor}"/>
+      <circle class="anillo__valor" cx="${tam / 2}" cy="${tam / 2}" r="${r}" stroke-width="${grosor}" stroke-dasharray="${c}" stroke-dashoffset="${c}" data-final="${c * (1 - pct)}"/>
+    </svg>${texto ? `<div class="anillo__centro">${texto}</div>` : ''}</div>`;
+}
+
+// Fila compacta al estilo de una lista densa (icono + texto + valor a la derecha):
+// mismo espíritu que las filas de /programas en im-app, para el panel de arriba de "Hoy".
+function filaPanel(icono, titulo, sub, valor, unidadValor) {
+  return `<div class="panel-fila">
+    <div class="panel-fila__icono">${icono}</div>
+    <div class="panel-fila__txt"><div class="panel-fila__titulo">${titulo}</div><div class="panel-fila__sub">${sub}</div></div>
+    <div class="panel-fila__valor">${valor}${unidadValor ? `<span>${unidadValor}</span>` : ''}</div>
+  </div>`;
 }
 
 function semana(actividad) {
@@ -71,14 +84,11 @@ export function vistaHoy(ctx) {
     </div>`;
   }
 
-  const html = `<div class="vista">
+  const html = `<div class="vista vista-hoy">
     ${hero}
-    <div class="tarjeta bloque">
-      <div class="stats">
-        <div class="stat">${anillo(hechosN / total, `${Math.round((hechosN / total) * 100)}%`)}<div><div class="stat__num">${hechosN}<span style="font-size:18px;color:var(--tinta-3)">/${total}</span></div><div class="stat__txt">${esc(pack.unidad)}s leídos${fin ? `<br>acabas el ${fechaCorta(fin)}` : ''}</div></div></div>
-        <div class="stat"><div class="llama ${rachas.actual ? '' : 'llama--apagada'}">${I.llama}</div><div><div class="stat__num">${rachas.actual}</div><div class="stat__txt">${esc(fraseRacha(rachas))}</div></div></div>
-      </div>
-      <div style="height:16px"></div>
+    <div class="tarjeta bloque panel">
+      ${filaPanel(anillo(hechosN / total, '', 34), `${esc(pack.unidad)}s leídos`, fin ? `Acabas el ${fechaCorta(fin)}` : '¡Meta cumplida!', hechosN, `/${total}`)}
+      ${filaPanel(`<div class="llama llama--fila ${rachas.actual ? '' : 'llama--apagada'}">${I.llama}</div>`, esc(fraseRacha(rachas)), `Mejor racha: ${rachas.mejor} días`, rachas.actual, 'días')}
       ${semana(actividad)}
     </div>
     <div class="tarjeta bloque">
