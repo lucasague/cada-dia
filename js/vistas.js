@@ -110,16 +110,48 @@ export function vistaLeer(ctx, n) {
   const color = pack.colorSeccion(item.seccion);
   const seccion = (pack.secciones.find((s) => s.id === item.seccion) || {}).titulo || '';
   const ant = pack.porN.get(item.n - 1), sig = pack.porN.get(item.n + 1);
+
+  // Detectar si hay paralelo
+  const hayParalelo = item.parrafos_original && item.parrafos_original.length === item.parrafos.length;
+
+  // Generar contenido de texto
+  let contenidoTexto = '';
+  if (item.argumento) {
+    contenidoTexto += `<p class="argumento">${esc(item.argumento)}</p>`;
+  }
+  contenidoTexto += item.parrafos.map((p, i) => {
+    if (pack.formato === 'verso') {
+      // Verso: cada verso en su propio span
+      const versos = p.split('\n');
+      const htmlEspanol = versos.map(v => `<span class="verso">${conNotas(esc(v))}</span>`).join('');
+
+      if (hayParalelo) {
+        const versosOrig = item.parrafos_original[i].split('\n');
+        const htmlOriginal = versosOrig.map(v => `<span class="verso">${conNotas(esc(v))}</span>`).join('');
+        return `<div class="paralelo"><div class="paralelo__pista"><div class="paralelo__cara paralelo__cara--original" lang="it">${htmlOriginal}</div><div class="paralelo__cara" lang="es">${htmlEspanol}</div></div></div>`;
+      }
+      return `<div class="estrofa">${htmlEspanol}</div>`;
+    } else {
+      // Prosa
+      if (hayParalelo) {
+        return `<div class="paralelo"><div class="paralelo__pista"><div class="paralelo__cara paralelo__cara--original" lang="it">${conNotas(esc(item.parrafos_original[i]))}</div><div class="paralelo__cara" lang="es">${conNotas(esc(p))}</div></div></div>`;
+      }
+      return `<p>${conNotas(esc(p))}</p>`;
+    }
+  }).join('');
+
   const html = `<div class="vista">
     <div class="progreso-lectura" id="progresoLectura"></div>
     <div class="lectura__cab">
       <button class="boton-icono" data-ir="#/hoy" aria-label="Volver">${I.atras}</button>
       <div class="control-letra"><button class="boton-icono" data-letra="-1" aria-label="Letra más pequeña">${I.menos}</button><button class="boton-icono" data-letra="1" aria-label="Letra más grande">${I.mas}</button></div>
+      ${hayParalelo ? `<button class="boton-icono" data-lang aria-pressed="false" aria-label="Ver el original en ${esc((pack.original && pack.original.nombre) || 'italiano')}">${esc(((pack.original && pack.original.idioma) || 'it').toUpperCase())}</button>` : ''}
     </div>
     <div class="etiqueta etiqueta--seccion" style="--color-seccion:${color}">${esc(seccion)} · ${item.n} de ${pack.items.length}</div>
     <h1 class="lectura__titulo">${esc(item.titulo)}</h1>
     <p class="lectura__sub">${esc(pack.titulo)} · ${esc(pack.autor || '')}</p>
-    <div class="lectura__texto">${item.parrafos.map((p) => `<p>${conNotas(esc(p))}</p>`).join('')}</div>
+    <div class="lectura__texto" ${hayParalelo ? 'style="--desliz: 0" data-paralelo' : ''}>${contenidoTexto}</div>
+    ${hayParalelo ? `<div class="paralelo-indicador" data-indicador aria-hidden="true">${esc((pack.original && pack.original.nombre) || 'Original')} · desliza ← para volver</div>` : ''}
     ${item.notas && item.notas.length ? `<ol class="lectura__notas">${item.notas.map((nt) => `<li id="nota-${nt.n}" value="${nt.n}">${esc(nt.texto)}</li>`).join('')}</ol>` : ''}
     <div class="lectura__pie">
       ${hecho
@@ -131,6 +163,7 @@ export function vistaLeer(ctx, n) {
       </div>
     </div>
   </div>`;
+
   const montar = (el) => {
     window.scrollTo({ top: 0 });
     const barra = el.querySelector('#progresoLectura');
@@ -140,6 +173,92 @@ export function vistaLeer(ctx, n) {
       barra.style.width = pct + '%';
     };
     window.addEventListener('scroll', alScroll, { passive: true });
+
+    // Paralelo con el original: --desliz en .lectura__texto (0 = español, 1 = original).
+    // Cada estrofa es una fila con las dos caras lado a lado; la fila mide lo que la más alta,
+    // así que cambiar de idioma no mueve nada en vertical.
+    const textoEl = el.querySelector('[data-paralelo]');
+    if (textoEl) {
+      const btnLang = el.querySelector('[data-lang]');
+      const indicador = el.querySelector('[data-indicador]');
+      const siglaOriginal = (pack.original && pack.original.idioma ? pack.original.idioma : 'it').toUpperCase();
+      let estado = 0;       // lado en reposo: 0 español, 1 original
+      let gesto = null;     // { x0, y0, t0, eje: null | 'h' | 'v', id }
+      let ruedaAcum = 0, ruedaHasta = 0;
+
+      const pintar = (valor) => {
+        textoEl.style.setProperty('--desliz', valor);
+        if (indicador) indicador.style.opacity = valor >= 0.5 ? '1' : '0';
+      };
+      const fijar = (destino) => {
+        estado = destino;
+        textoEl.classList.remove('arrastrando');
+        pintar(destino);
+        if (btnLang) {
+          btnLang.setAttribute('aria-pressed', destino === 1 ? 'true' : 'false');
+          btnLang.textContent = destino === 1 ? 'ES' : siglaOriginal;
+          btnLang.setAttribute('aria-label', destino === 1 ? 'Volver al español' : `Ver el original en ${(pack.original && pack.original.nombre) || 'italiano'}`);
+        }
+      };
+
+      try {
+        if (!localStorage.getItem('cadadia.pistaParalelo')) {
+          ctx.toast(`Desliza a la derecha para ver el original en ${((pack.original && pack.original.nombre) || 'italiano').toLowerCase()}`);
+          localStorage.setItem('cadadia.pistaParalelo', '1');
+        }
+      } catch { /* sin localStorage: no pasa nada */ }
+
+      if (btnLang) btnLang.addEventListener('click', () => fijar(estado === 1 ? 0 : 1));
+
+      // Táctil / lápiz. Con touch-action: pan-y el navegador hace el scroll vertical él solo
+      // (y manda pointercancel si lo toma); nosotros solo tratamos el movimiento horizontal.
+      textoEl.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+        gesto = e.clientX < 24 ? null : { x0: e.clientX, y0: e.clientY, t0: performance.now(), eje: null, id: e.pointerId };
+      });
+      textoEl.addEventListener('pointermove', (e) => {
+        if (!gesto || e.pointerId !== gesto.id || gesto.eje === 'v') return;
+        const dx = e.clientX - gesto.x0, dy = e.clientY - gesto.y0;
+        if (!gesto.eje) {
+          if (Math.hypot(dx, dy) < 10) return;
+          if (Math.abs(dx) > 1.3 * Math.abs(dy)) {
+            gesto.eje = 'h';
+            try { textoEl.setPointerCapture(e.pointerId); } catch { /* ya liberado */ }
+            textoEl.classList.add('arrastrando');
+          } else { gesto.eje = 'v'; return; }
+        }
+        pintar(Math.max(0, Math.min(1, estado + dx / (textoEl.clientWidth || 1))));
+      });
+      const terminar = (e, cancelado) => {
+        if (!gesto || e.pointerId !== gesto.id) return;
+        const g = gesto; gesto = null;
+        if (g.eje !== 'h') return;
+        if (cancelado) { fijar(estado); return; }
+        const dx = e.clientX - g.x0, dt = Math.max(1, performance.now() - g.t0);
+        const decidido = Math.abs(dx) > textoEl.clientWidth * 0.25 || Math.abs(dx) / dt > 0.4;
+        fijar(decidido ? (dx > 0 ? 1 : 0) : estado);
+      };
+      textoEl.addEventListener('pointerup', (e) => terminar(e, false));
+      textoEl.addEventListener('pointercancel', (e) => terminar(e, true));
+
+      // Trackpad (desplazamiento horizontal con dos dedos). Con desplazamiento "natural"
+      // (macOS, Windows de precisión) mover los dedos a la derecha da deltaX negativo:
+      // eso lleva al original, igual que el gesto táctil. Sin probar en un trackpad real.
+      textoEl.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+        e.preventDefault();
+        const ahora = performance.now();
+        if (ahora < ruedaHasta) return;
+        ruedaAcum += e.deltaX;
+        if (Math.abs(ruedaAcum) > 60) {
+          fijar(ruedaAcum < 0 ? 1 : 0);
+          ruedaAcum = 0;
+          ruedaHasta = ahora + 400;
+        }
+      }, { passive: false });
+    }
+
+    // Los listeners del paralelo cuelgan de textoEl y se van con la vista.
     el._limpiar = () => window.removeEventListener('scroll', alScroll);
   };
   return { html, montar };

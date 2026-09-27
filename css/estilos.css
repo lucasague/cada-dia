@@ -259,6 +259,56 @@ p { margin: 0; }
 .lectura__texto p:first-child::first-letter {
   font-size: 3.1em; float: left; line-height: .85; padding: 4px 8px 0 0; color: var(--oro); font-weight: 600;
 }
+
+/* verso */
+.lectura__texto .estrofa { margin: 0 0 0.9em; }
+.lectura__texto .verso { display: block; padding-left: 1.4em; text-indent: -1.4em; hyphens: manual; }
+
+/* paralelo */
+.lectura__texto[data-paralelo] { touch-action: pan-y pinch-zoom; }
+.paralelo { overflow: hidden; margin: 0 0 0.9em; }
+.paralelo__pista {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 200%;
+  transform: translateX(calc((var(--desliz, 0) - 1) * 50%));
+  transition: transform .22s ease-out;
+}
+.lectura__texto[data-paralelo].arrastrando .paralelo__pista {
+  transition: none;
+}
+.paralelo__cara { min-width: 0; }
+.paralelo__cara--original {
+  color: var(--tinta-2);
+  padding-right: 24px; /* hueco entre caras durante el arrastre; el español queda alineado al borde */
+}
+.lectura__texto p.argumento::first-letter {
+  font-size: inherit; float: none; padding: 0; color: inherit; font-weight: inherit;
+}
+.lectura__texto p.argumento {
+  font-style: italic;
+  color: var(--tinta-2);
+  font-size: 0.95em;
+  margin-bottom: 1.1em;
+}
+
+.paralelo-indicador {
+  position: fixed;
+  bottom: calc(92px + var(--safe-abajo));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--tinta);
+  color: var(--fondo);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+  z-index: 10;
+}
 .nota-ref { font-size: .55em; line-height: 0; vertical-align: super; }
 .nota-ref a { color: var(--oro); text-decoration: none; font-weight: 600; padding: 0 2px; }
 .lectura__notas { margin: 26px 0 0; padding: 16px 0 0 1.4em; border-top: 1px dashed var(--linea); font-size: 14px; color: var(--tinta-2); line-height: 1.45; }

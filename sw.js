@@ -1,11 +1,11 @@
 /* Service worker de Cada día: caché de la app para uso sin conexión + notificaciones push. */
-const VERSION = 'cadadia-v1';
+const VERSION = 'cadadia-v2';
 const CONCHA = [
   './', './index.html', './manifest.webmanifest',
   './css/estilos.css',
   './js/app.js', './js/estado.js', './js/fechas.js', './js/contenido.js', './js/confeti.js',
   './js/github.js', './js/sincronizar.js', './js/notificaciones.js', './js/iconos.js', './js/vistas.js',
-  './contenido/index.json', './contenido/divina-comedia.json',
+  './contenido/index.json', './contenido/divina-comedia.json', './contenido/divina-comedia-prosa.json',
   './iconos/icono.svg', './iconos/icono-192.png', './iconos/icono-512.png', './iconos/insignia-96.png',
 ];
 

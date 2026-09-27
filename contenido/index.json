@@ -4,7 +4,15 @@
    "id": "divina-comedia",
    "titulo": "La Divina Comedia",
    "autor": "Dante Alighieri",
-   "descripcion": "Un canto al día. 100 cantos: Infierno, Purgatorio y Paraíso. Traducción de Manuel Aranda y Sanjuán (1868).",
+   "descripcion": "Un canto al día. 100 cantos en verso: Infierno, Purgatorio y Paraíso. Traducción en tercetos rimados de Bartolomé Mitre (1922), con el italiano de Dante al deslizar.",
+   "unidad": "canto",
+   "total": 100
+  },
+  {
+   "id": "divina-comedia-prosa",
+   "titulo": "La Divina Comedia (prosa)",
+   "autor": "Dante Alighieri",
+   "descripcion": "Un canto al día. Traducción en prosa de Manuel Aranda y Sanjuán (1868).",
    "unidad": "canto",
    "total": 100
   }
