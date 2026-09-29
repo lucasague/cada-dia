@@ -99,6 +99,11 @@ export function desmarcar(metaId, n) {
   delete estado.progreso[metaId].hechos[n];
   guardar();
 }
+/** Día en que la meta empezó de verdad: el del primer ítem hecho (no el de crearla). */
+export function inicioMeta(meta) {
+  const fechas = Object.values(hechos(meta.id)).sort();
+  return fechas[0] || meta.inicio;
+}
 /** Fechas (YYYY-MM-DD) en las que se hizo al menos una cosa, para esta meta. */
 export function fechasConActividad(metaId) {
   const conteo = {};

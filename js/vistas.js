@@ -4,7 +4,7 @@
 import * as estado from './estado.js';
 import { I } from './iconos.js';
 import { siguientePendiente, extracto, listarPacks } from './contenido.js';
-import { hoyISO, fechaCorta, ultimaSemana, celdasMes, nombreMes, DIAS_SEMANA, sumarDias, deISO, aISO } from './fechas.js';
+import { hoyISO, diasEntre, fechaCorta, ultimaSemana, celdasMes, nombreMes, DIAS_SEMANA, sumarDias, deISO, aISO } from './fechas.js';
 import { lanzarConfeti } from './confeti.js';
 import * as notif from './notificaciones.js';
 import * as sync from './sincronizar.js';
@@ -53,6 +53,26 @@ const fraseRacha = (r) => {
 };
 
 // ------------------------------------------------------------------ HOY
+// Plan de "uno al día" desde el día en que se empezó de verdad. Lo que falte para ir al día se
+// propone como "recuperar" (no "adelantar"), y las fechas previstas se recalculan cada día
+// al ritmo de uno diario desde hoy.
+function plan(ctx) {
+  const { meta, pack, hechos, rachas } = ctx;
+  const total = pack.items.length, hechosN = Object.keys(hechos).length;
+  const inicio = estado.inicioMeta(meta);
+  const dias = hechosN ? Math.max(1, diasEntre(inicio, ctx.hoy) + 1) : 0;
+  const alDia = Math.min(total, dias);                       // lo que habría que llevar al acabar hoy
+  const faltanHoy = Math.max(0, alDia - hechosN);             // cuántos leer hoy para ir al día
+  const recuperar = Math.max(0, faltanHoy - (rachas.hoyHecho ? 0 : 1)); // de días anteriores
+  const restantes = total - hechosN;
+  const primero = rachas.hoyHecho ? 1 : 0;                    // el siguiente pendiente toca hoy o mañana
+  const fin = restantes > 0 ? sumarDias(ctx.hoy, restantes - 1 + primero) : null;
+  const pendientes = pack.items.filter((it) => !hechos[it.n]);
+  const prevista = new Map(pendientes.map((it, k) => [it.n, sumarDias(ctx.hoy, k + primero)]));
+  const aRecuperar = new Set(pendientes.slice(rachas.hoyHecho ? 0 : 1, (rachas.hoyHecho ? 0 : 1) + recuperar).map((it) => it.n));
+  return { inicio, hechosN, total, faltanHoy, recuperar, fin, prevista, aRecuperar };
+}
+
 export function vistaHoy(ctx) {
   const { meta, pack, hechos, actividad, rachas } = ctx;
   if (!meta || !pack) return { html: `<div class="vacio">No hay ninguna meta activa.<br><button class="boton boton--oro mt" data-ir="#/ajustes">Crear una</button></div>` };
@@ -62,8 +82,7 @@ export function vistaHoy(ctx) {
   const hoyHecho = rachas.hoyHecho;
   const ultimoHoy = Object.entries(hechos).filter(([, f]) => f === ctx.hoy).map(([n]) => Number(n)).sort((a, b) => b - a)[0];
   const itemHoy = hoyHecho && ultimoHoy ? pack.porN.get(ultimoHoy) : siguiente;
-  const restantes = total - hechosN;
-  const fin = restantes > 0 ? sumarDias(ctx.hoy, restantes - (hoyHecho ? 0 : 1)) : null;
+  const { fin, recuperar, faltanHoy, inicio } = plan(ctx);
 
   let hero;
   if (!itemHoy) {
@@ -76,9 +95,12 @@ export function vistaHoy(ctx) {
       <h1 class="hero__titulo">${esc(itemHoy.titulo)}</h1>
       <p class="hero__sub">${esc(pack.titulo)} · ${itemHoy.n} de ${total}</p>
       <p class="hero__extracto">${esc(extracto(itemHoy, 200))}</p>
+      ${recuperar ? `<p class="hero__recuperar">${hoyHecho
+        ? `Te ${recuperar === 1 ? 'queda 1' : `quedan ${recuperar}`} por recuperar para ir al día.`
+        : `Hoy tocan ${faltanHoy}: el de hoy y ${recuperar === 1 ? 'uno' : recuperar} por recuperar.`}</p>` : ''}
       <div class="hero__acciones">
         <button class="boton ${hoyHecho ? 'boton--secundario' : 'boton--oro'}" data-ir="#/leer/${itemHoy.n}">${I.libro} ${hoyHecho ? 'Releer' : 'Leer ahora'}</button>
-        ${hoyHecho && siguiente ? `<button class="boton boton--secundario" data-ir="#/leer/${siguiente.n}">Adelantar el ${esc(siguiente.titulo)}</button>` : ''}
+        ${hoyHecho && siguiente ? `<button class="boton ${recuperar ? 'boton--oro' : 'boton--secundario'}" data-ir="#/leer/${siguiente.n}">${recuperar ? 'Recuperar' : 'Adelantar'} el ${esc(siguiente.titulo)}</button>` : ''}
         ${!hoyHecho ? `<button class="boton boton--secundario" data-marcar="${itemHoy.n}">${I.check} Ya lo leí</button>` : ''}
       </div>
     </div>`;
@@ -92,7 +114,7 @@ export function vistaHoy(ctx) {
       ${semana(actividad)}
     </div>
     <div class="tarjeta bloque">
-      <div class="fila"><div class="grow"><div class="etiqueta">Meta</div><div class="campo__titulo">${esc(meta.titulo)}</div><div class="nota">Un ${esc(pack.unidad)} al día desde el ${fechaCorta(meta.inicio)}. Mejor racha: ${rachas.mejor} días. Días activos: ${rachas.diasTotales}.</div></div></div>
+      <div class="fila"><div class="grow"><div class="etiqueta">Meta</div><div class="campo__titulo">${esc(meta.titulo)}</div><div class="nota">Un ${esc(pack.unidad)} al día desde el ${fechaCorta(inicio)}. Mejor racha: ${rachas.mejor} días. Días activos: ${rachas.diasTotales}.</div></div></div>
       <div class="barra"><div class="barra__valor" data-final="${(hechosN / total) * 100}%"></div></div>
       <div class="barra-secciones">${pack.secciones.map((s) => { const its = pack.items.filter((i) => i.seccion === s.id); const h = its.filter((i) => hechos[i.n]).length; return `<div style="--color-seccion:${s.color}" title="${esc(s.titulo)} ${h}/${its.length}"><i data-final="${(h / its.length) * 100}%"></i></div>`; }).join('')}</div>
       <div class="leyenda">${pack.secciones.map((s) => `<span style="--color-seccion:${s.color}">${esc(s.titulo)}</span>`).join('')}</div>
@@ -306,6 +328,7 @@ export function vistaLista(ctx) {
   const { pack, hechos } = ctx;
   if (!pack) return { html: '<div class="vacio">Sin contenido.</div>' };
   const siguiente = siguientePendiente(pack, hechos);
+  const { prevista, aRecuperar } = plan(ctx);
   const html = `<div class="vista">${pack.secciones.map((s) => {
     const its = pack.items.filter((i) => i.seccion === s.id);
     const h = its.filter((i) => hechos[i.n]).length;
@@ -313,7 +336,7 @@ export function vistaLista(ctx) {
       <div class="lista">${its.map((it) => `
         <button class="item ${siguiente && siguiente.n === it.n ? 'item--hoy' : ''}" data-ir="#/leer/${it.n}">
           <div class="item__num">${it.numero}</div>
-          <div class="item__cuerpo"><div class="item__titulo">${esc(it.titulo)}</div><div class="item__meta">${hechos[it.n] ? 'Leído el ' + fechaCorta(hechos[it.n]) : siguiente && siguiente.n === it.n ? 'Toca hoy' : esc(extracto(it, 70))}</div></div>
+          <div class="item__cuerpo"><div class="item__titulo">${esc(it.titulo)}</div><div class="item__meta">${hechos[it.n] ? 'Leído el ' + fechaCorta(hechos[it.n]) : prevista.get(it.n) === ctx.hoy ? 'Toca hoy' : (aRecuperar.has(it.n) ? 'Para recuperar · ' : '') + 'Previsto el ' + fechaCorta(prevista.get(it.n))}</div></div>
           <span class="check ${hechos[it.n] ? 'check--hecho' : ''}" data-toggle="${it.n}" role="button" aria-label="Marcar">${I.check}</span>
         </button>`).join('')}</div>`;
   }).join('')}</div>`;
@@ -330,11 +353,11 @@ export function vistaCalendario(ctx) {
   const { actividad, rachas, meta, pack, hechos } = ctx;
   const hoy = deISO(ctx.hoy);
   if (!mesVisto) mesVisto = { y: hoy.getFullYear(), m: hoy.getMonth() };
-  const celdas = celdasMes(mesVisto.y, mesVisto.m, actividad, meta ? meta.inicio : null, ctx.hoy);
+  const p = meta && pack ? plan(ctx) : null;
+  const celdas = celdasMes(mesVisto.y, mesVisto.m, actividad, p ? p.inicio : null, ctx.hoy);
   const total = pack ? pack.items.length : 0, hechosN = Object.keys(hechos).length;
-  const restantes = total - hechosN;
-  const fin = restantes > 0 ? sumarDias(ctx.hoy, restantes - (rachas.hoyHecho ? 0 : 1)) : null;
-  const diasDesdeInicio = meta ? Math.max(1, Math.round((hoy - deISO(meta.inicio)) / 86400000) + 1) : 0;
+  const fin = p ? p.fin : null;
+  const diasDesdeInicio = p && hechosN ? Math.max(1, Math.round((hoy - deISO(p.inicio)) / 86400000) + 1) : 0;
   const cumplimiento = diasDesdeInicio ? Math.round((rachas.diasTotales / diasDesdeInicio) * 100) : 0;
   const html = `<div class="vista">
     <div class="tarjeta">
@@ -344,7 +367,7 @@ export function vistaCalendario(ctx) {
         <div><div class="stat__num">${cumplimiento}%</div><div class="stat__txt">días cumplidos</div></div>
       </div>
       ${pack ? `<div class="barra"><div class="barra__valor" data-final="${(hechosN / total) * 100}%"></div></div>
-      <p class="nota mt">${hechosN} de ${total} ${esc(pack.unidad)}s. ${fin ? `A este ritmo terminas el <b>${fechaCorta(fin)}</b>.` : '¡Meta cumplida!'}</p>` : ''}
+      <p class="nota mt">${hechosN} de ${total} ${esc(pack.unidad)}s. ${fin ? `A uno al día terminas el <b>${fechaCorta(fin)}</b>.${p.recuperar ? ` Te ${p.recuperar === 1 ? 'queda 1' : `quedan ${p.recuperar}`} por recuperar.` : ''}` : '¡Meta cumplida!'}</p>` : ''}
     </div>
     <div class="tarjeta bloque">
       <div class="calendario__cab">
@@ -395,7 +418,7 @@ export function vistaAjustes(ctx) {
 
     <div class="tarjeta bloque">
       <div class="etiqueta">Metas</div>
-      ${ctx.estado.metas.map((m) => `<div class="campo"><div class="campo__txt"><div class="campo__titulo">${esc(m.titulo)}</div><div class="campo__desc">Desde el ${fechaCorta(m.inicio)} · ${Object.keys(estado.hechos(m.id)).length} hechos</div></div>
+      ${ctx.estado.metas.map((m) => `<div class="campo"><div class="campo__txt"><div class="campo__titulo">${esc(m.titulo)}</div><div class="campo__desc">Desde el ${fechaCorta(estado.inicioMeta(m))} · ${Object.keys(estado.hechos(m.id)).length} hechos</div></div>
         ${m.activa ? '<span class="nota">Activa</span>' : `<button class="boton boton--secundario" data-activar="${m.id}">Activar</button>`}</div>`).join('')}
       <div class="campo"><div class="campo__txt"><div class="campo__titulo">Nueva meta</div><div class="campo__desc">Elige un contenido. Los paquetes están en <code>contenido/</code>.</div></div>
         <select data-pack><option value="">Cargando…</option></select></div>
