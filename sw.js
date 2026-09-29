@@ -1,5 +1,5 @@
 /* Service worker de Cada día: caché de la app para uso sin conexión + notificaciones push. */
-const VERSION = 'cadadia-v7';
+const VERSION = 'cadadia-v8';
 const CONCHA = [
   './', './index.html', './manifest.webmanifest',
   './css/estilos.css',

@@ -349,7 +349,13 @@ p { margin: 0; }
 .celda--vacia { background: transparent; }
 .celda--hecho { background: linear-gradient(135deg, var(--oro), var(--oro-2)); color: #1d1a17; font-weight: 700; }
 .celda--hoy { border-color: var(--oro); box-shadow: 0 0 0 2px var(--oro-suave); }
-.celda--futuro { opacity: .35; }
+.celda--futuro { opacity: .55; }
+.celda { overflow: visible; }
+.celda__hito { position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-seccion); }
+.hitos { display: grid; gap: 6px; }
+.hito { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; padding-left: 12px; position: relative; }
+.hito::before { content: ""; position: absolute; left: 0; top: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-seccion); }
+.hito span { color: var(--tinta-2); text-align: right; }
 .celda--fallo { background: color-mix(in srgb, var(--infierno) 12%, var(--fondo-2)); }
 .celda__pts { position: absolute; bottom: 4px; font-size: 9px; opacity: .8; }
 

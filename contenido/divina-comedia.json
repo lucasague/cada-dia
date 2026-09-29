@@ -11,25 +11,33 @@
  },
  "secciones": [
   {
+   "id": "introduccion",
+   "titulo": "Introducción",
+   "color": "var(--tinta-3)"
+  },
+  {
    "id": "infierno",
-   "titulo": "Infierno"
+   "titulo": "Infierno",
+   "color": "var(--infierno)"
   },
   {
    "id": "purgatorio",
-   "titulo": "Purgatorio"
+   "titulo": "Purgatorio",
+   "color": "var(--purgatorio)"
   },
   {
    "id": "paraiso",
-   "titulo": "Paraíso"
+   "titulo": "Paraíso",
+   "color": "var(--paraiso)"
   }
  ],
  "items": [
   {
    "n": 1,
-   "seccion": "infierno",
+   "seccion": "introduccion",
    "numero": 1,
    "titulo": "Canto I",
-   "subtitulo": "INFIERNO · Canto I",
+   "subtitulo": "INTRODUCCIÓN · Canto I",
    "argumento": "La selva oscura. El poeta se extravía en ella en medio de la noche. Al amanacer sale a un valle y llega al pie de un monte iluminado por el sol. Se atraviesan en su camino tres animales simbólicos. Retrocede y se le aparece la sombra de Virgilio, que lo conforta, y le ofrece llevarlo al linde del paraíso al través del infierno y del purgatorio. Los dos poetas prosiguen su camino.",
    "parrafos": [
     "En medio del camino de la vida,\nerrante me encontré por selva oscura,\nen que la recta vía era perdida.",

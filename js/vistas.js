@@ -70,7 +70,18 @@ function plan(ctx) {
   const pendientes = pack.items.filter((it) => !hechos[it.n]);
   const prevista = new Map(pendientes.map((it, k) => [it.n, sumarDias(ctx.hoy, k + primero)]));
   const aRecuperar = new Set(pendientes.slice(rachas.hoyHecho ? 0 : 1, (rachas.hoyHecho ? 0 : 1) + recuperar).map((it) => it.n));
-  return { inicio, hechosN, total, faltanHoy, recuperar, fin, prevista, aRecuperar };
+  // Qué cantos caen cada día: los leídos, en su fecha; los pendientes, en la prevista.
+  const porFecha = new Map();
+  const apuntar = (f, it) => { if (!porFecha.has(f)) porFecha.set(f, []); porFecha.get(f).push(it); };
+  pack.items.forEach((it) => apuntar(hechos[it.n] || prevista.get(it.n), it));
+  // Cuándo empieza cada sección: la fecha de su primer canto (leído o previsto).
+  const hitos = pack.secciones.map((sec) => {
+    const its = pack.items.filter((it) => it.seccion === sec.id);
+    const f = its.length ? (hechos[its[0].n] || prevista.get(its[0].n)) : null;
+    const acaba = its.length ? (hechos[its[its.length - 1].n] || prevista.get(its[its.length - 1].n)) : null;
+    return { ...sec, desde: f, hasta: acaba, empezada: its.some((it) => hechos[it.n]), acabada: its.every((it) => hechos[it.n]), primero: its[0] };
+  });
+  return { inicio, hechosN, total, faltanHoy, recuperar, fin, prevista, aRecuperar, porFecha, hitos };
 }
 
 export function vistaHoy(ctx) {
@@ -109,14 +120,14 @@ export function vistaHoy(ctx) {
   const html = `<div class="vista vista-hoy">
     ${hero}
     <div class="tarjeta bloque panel">
-      ${filaPanel(anillo(hechosN / total, '', 34), `${esc(pack.unidad)}s leídos`, fin ? `Acabas el ${fechaCorta(fin)}` : '¡Meta cumplida!', hechosN, `/${total}`)}
+      ${filaPanel(anillo(hechosN / total, '', 34), 'Progreso', `${hechosN} de ${total} ${esc(pack.unidad)}s · ${fin ? `acabas el ${fechaCorta(fin)}` : '¡meta cumplida!'}`, `${Math.round((hechosN / total) * 100)}%`, 'leído')}
       ${filaPanel(`<div class="llama llama--fila ${rachas.actual ? '' : 'llama--apagada'}">${I.llama}</div>`, esc(fraseRacha(rachas)), `Mejor racha: ${rachas.mejor} días`, rachas.actual, 'días')}
       ${semana(actividad)}
     </div>
     <div class="tarjeta bloque">
       <div class="fila"><div class="grow"><div class="etiqueta">Meta</div><div class="campo__titulo">${esc(meta.titulo)}</div><div class="nota">Un ${esc(pack.unidad)} al día desde el ${fechaCorta(inicio)}. Mejor racha: ${rachas.mejor} días. Días activos: ${rachas.diasTotales}.</div></div></div>
       <div class="barra"><div class="barra__valor" data-final="${(hechosN / total) * 100}%"></div></div>
-      <div class="barra-secciones">${pack.secciones.map((s) => { const its = pack.items.filter((i) => i.seccion === s.id); const h = its.filter((i) => hechos[i.n]).length; return `<div style="--color-seccion:${s.color}" title="${esc(s.titulo)} ${h}/${its.length}"><i data-final="${(h / its.length) * 100}%"></i></div>`; }).join('')}</div>
+      <div class="barra-secciones">${pack.secciones.map((s) => { const its = pack.items.filter((i) => i.seccion === s.id); const h = its.filter((i) => hechos[i.n]).length; return `<div style="--color-seccion:${s.color}; flex:${its.length}" title="${esc(s.titulo)} ${h}/${its.length}"><i data-final="${(h / its.length) * 100}%"></i></div>`; }).join('')}</div>
       <div class="leyenda">${pack.secciones.map((s) => `<span style="--color-seccion:${s.color}">${esc(s.titulo)}</span>`).join('')}</div>
     </div>
   </div>`;
@@ -358,6 +369,15 @@ export function vistaCalendario(ctx) {
   const total = pack ? pack.items.length : 0, hechosN = Object.keys(hechos).length;
   const fin = p ? p.fin : null;
   const diasDesdeInicio = p && hechosN ? Math.max(1, Math.round((hoy - deISO(p.inicio)) / 86400000) + 1) : 0;
+  // Número de canto(s) de cada día y, si ese día empieza una sección, su color.
+  const inicios = new Map(p ? p.hitos.filter((h) => h.primero).map((h) => [h.primero.n, h]) : []);
+  const celdaCantos = (iso) => {
+    const its = p ? p.porFecha.get(iso) : null;
+    if (!its || !its.length) return '';
+    const hito = its.map((it) => inicios.get(it.n)).find(Boolean);
+    const txt = its.length > 1 ? `${its[0].n}-${its[its.length - 1].n}` : `${its[0].n}`;
+    return `<span class="celda__pts">${txt}</span>${hito && hito.primero.n > 1 ? `<span class="celda__hito" style="--color-seccion:${hito.color}" title="Empieza ${esc(hito.titulo)}"></span>` : ''}`;
+  };
   const cumplimiento = diasDesdeInicio ? Math.round((rachas.diasTotales / diasDesdeInicio) * 100) : 0;
   const html = `<div class="vista">
     <div class="tarjeta">
@@ -367,7 +387,8 @@ export function vistaCalendario(ctx) {
         <div><div class="stat__num">${cumplimiento}%</div><div class="stat__txt">días cumplidos</div></div>
       </div>
       ${pack ? `<div class="barra"><div class="barra__valor" data-final="${(hechosN / total) * 100}%"></div></div>
-      <p class="nota mt">${hechosN} de ${total} ${esc(pack.unidad)}s. ${fin ? `A uno al día terminas el <b>${fechaCorta(fin)}</b>.${p.recuperar ? ` Te ${p.recuperar === 1 ? 'queda 1' : `quedan ${p.recuperar}`} por recuperar.` : ''}` : '¡Meta cumplida!'}</p>` : ''}
+      ${p ? `<div class="hitos mt">${p.hitos.map((h) => `<div class="hito" style="--color-seccion:${h.color}"><b>${esc(h.titulo)}</b><span>${h.acabada ? `acabado el ${fechaCorta(h.hasta)}` : h.empezada ? `empezado el ${fechaCorta(h.desde)} · acabas el ${fechaCorta(h.hasta)}` : `empiezas el ${fechaCorta(h.desde)}`}</span></div>`).join('')}</div>` : ''}
+      <p class="nota mt">Llevas leído el ${Math.round((hechosN / total) * 100)}%: ${hechosN} de ${total} ${esc(pack.unidad)}s. ${fin ? `A uno al día terminas el <b>${fechaCorta(fin)}</b>.${p.recuperar ? ` Te ${p.recuperar === 1 ? 'queda 1' : `quedan ${p.recuperar}`} por recuperar.` : ''}` : '¡Meta cumplida!'}</p>` : ''}
     </div>
     <div class="tarjeta bloque">
       <div class="calendario__cab">
@@ -377,9 +398,10 @@ export function vistaCalendario(ctx) {
       </div>
       <div class="calendario__grid">
         ${DIAS_SEMANA.map((d) => `<div class="calendario__dow">${d}</div>`).join('')}
-        ${celdas.map((c, i) => c ? `<div class="celda ${c.hecho ? 'celda--hecho' : ''} ${c.esHoy ? 'celda--hoy' : ''} ${c.futuro ? 'celda--futuro' : ''} ${c.fallo ? 'celda--fallo' : ''}" style="animation-delay:${i * 12}ms" title="${c.iso}">${c.dia}${c.cantidad > 1 ? `<span class="celda__pts">×${c.cantidad}</span>` : ''}</div>` : '<div class="celda celda--vacia"></div>').join('')}
+        ${celdas.map((c, i) => c ? `<div class="celda ${c.hecho ? 'celda--hecho' : ''} ${c.esHoy ? 'celda--hoy' : ''} ${c.futuro ? 'celda--futuro' : ''} ${c.fallo ? 'celda--fallo' : ''}" style="animation-delay:${i * 12}ms" title="${c.iso}">${c.dia}${celdaCantos(c.iso)}</div>` : '<div class="celda celda--vacia"></div>').join('')}
       </div>
       <div class="leyenda mt"><span style="--color-seccion:var(--oro)">día cumplido</span><span style="--color-seccion:color-mix(in srgb, var(--infierno) 40%, var(--fondo-2))">día sin lectura</span></div>
+      <p class="nota mt">El número de cada día es el canto que lees o que te toca a uno al día; se reajusta si te retrasas. El punto marca el día en que empieza una cántica.</p>
     </div>
   </div>`;
   return { html, montar: animarBarras };
