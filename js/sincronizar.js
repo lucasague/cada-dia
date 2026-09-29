@@ -24,6 +24,29 @@ export function idDispositivo() {
   return id;
 }
 
+// Cada dispositivo crea su meta al arrancar con un id propio (pack + hora), así que la misma meta
+// ("la Comedia") llega del otro dispositivo con otro id. Se casa por pack: el progreso remoto de una
+// meta que aquí no existe se apunta a la meta local del mismo pack, en vez de quedar huérfano.
+function progresoCasado(progresoRemoto, metasRemotas) {
+  const local = estado.obtener();
+  const salida = {};
+  for (const [metaId, datos] of Object.entries(progresoRemoto || {})) {
+    let destino = metaId;
+    if (!local.metas.some((m) => m.id === metaId)) {
+      const remota = (metasRemotas || []).find((m) => m.id === metaId);
+      const pack = remota ? remota.pack : metaId.replace(/-[a-z0-9]+$/, '');
+      const gemela = local.metas.find((m) => m.pack === pack);
+      if (gemela) destino = gemela.id;
+    }
+    if (!salida[destino]) salida[destino] = { hechos: {} };
+    for (const [n, fecha] of Object.entries((datos && datos.hechos) || {})) {
+      const previo = salida[destino].hechos[n];
+      if (!previo || fecha < previo) salida[destino].hechos[n] = fecha;
+    }
+  }
+  return salida;
+}
+
 let temporizador = null;
 /** Sube el progreso (con retardo para agrupar varios cambios seguidos). */
 export function programarSubidaProgreso() {
@@ -38,7 +61,7 @@ export async function subirProgreso() {
   await actualizarJSON(cfg(), RUTA_PROGRESO, (remoto) => {
     // Unión: gana la fecha más antigua por ítem. Después fusionamos lo remoto en local también.
     const salida = { actualizado: new Date().toISOString(), metas: local.metas, progreso: {} };
-    const fuentes = [remoto && remoto.progreso, local.progreso];
+    const fuentes = [remoto && progresoCasado(remoto.progreso, remoto.metas), local.progreso];
     for (const fuente of fuentes) {
       if (!fuente) continue;
       for (const [metaId, datos] of Object.entries(fuente)) {
@@ -59,13 +82,13 @@ export async function bajarProgreso() {
   if (!configurado()) return false;
   const { datos } = await leerJSON(cfg(), RUTA_PROGRESO);
   if (!datos) return false;
-  // Metas que existen en remoto y no aquí (por ejemplo, creadas en el móvil).
+  // Metas que existen en remoto y no aquí, de un pack que aquí no hay (si el pack ya está, se casan).
   const local = estado.obtener();
   let nuevasMetas = false;
   for (const m of datos.metas || []) {
-    if (!local.metas.some((x) => x.id === m.id)) { local.metas.push({ ...m, activa: local.metas.length === 0 }); nuevasMetas = true; }
+    if (!local.metas.some((x) => x.id === m.id || x.pack === m.pack)) { local.metas.push({ ...m, activa: local.metas.length === 0 }); nuevasMetas = true; }
   }
-  const cambio = estado.fusionarProgreso(datos.progreso);
+  const cambio = estado.fusionarProgreso(progresoCasado(datos.progreso, datos.metas));
   if (nuevasMetas) estado.ajustar({});
   return cambio || nuevasMetas;
 }

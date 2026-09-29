@@ -23,7 +23,7 @@
   --radio: 20px;
   --radio-sm: 12px;
   --fuente-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --fuente-lectura: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --fuente-lectura: Georgia, "Times New Roman", serif; /* la misma letra que Laudes */
   --escala-lectura: 1;
   --safe-abajo: env(safe-area-inset-bottom, 0px);
   --safe-arriba: env(safe-area-inset-top, 0px);
@@ -266,7 +266,8 @@ p { margin: 0; }
 .boton-icono svg { width: 20px; height: 20px; }
 .lectura__titulo { font-family: var(--fuente-lectura); font-size: 44px; line-height: 1; font-weight: 600; margin-top: 6px; }
 .lectura__sub { color: var(--tinta-2); margin-top: 4px; }
-.lectura__texto { margin-top: 26px; font-family: var(--fuente-lectura); font-size: calc(21px * var(--escala-lectura)); line-height: 1.55; }
+/* como .prayer-copy de Laudes: Georgia 1.08rem × escala, interletra -0.025em, interlínea 1.62 */
+.lectura__texto { margin-top: 26px; font-family: var(--fuente-lectura); font-size: calc(1.08rem * var(--escala-lectura)); letter-spacing: -0.025em; line-height: 1.62; }
 .lectura__texto p { margin: 0 0 1.1em; text-wrap: pretty; hyphens: auto; }
 .lectura__texto p:first-child::first-letter {
   font-size: 3.1em; float: left; line-height: .85; padding: 4px 8px 0 0; color: var(--oro); font-weight: 600;
@@ -331,7 +332,12 @@ p { margin: 0; }
 .lectura__hecho { display: flex; align-items: center; gap: 10px; color: var(--exito); font-weight: 600; }
 .lectura__navs { display: flex; justify-content: space-between; gap: 10px; }
 .progreso-lectura { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--oro), var(--oro-2)); width: 0; z-index: 7; transition: width .1s linear; }
-.control-letra { display: inline-flex; gap: 4px; margin-left: auto; }
+.control-letra { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; font-size: 13px; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.control-letra input[type=range] { width: 150px; accent-color: var(--oro); }
+.control-letra span { min-width: 2ch; text-align: right; }
+.lectura__cab .control-letra input[type=range] { width: 120px; }
+.control-letra__a { font-family: var(--fuente-lectura); font-size: 13px; min-width: 0 !important; }
+.control-letra__a--gr { font-size: 20px; }
 
 /* ---------- calendario ---------- */
 .calendario__cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

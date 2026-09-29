@@ -3,7 +3,7 @@
 // Modelo:
 //   metas:    [{ id, pack, titulo, inicio: 'YYYY-MM-DD', recordatorio: 'HH:MM', activa }]
 //   progreso: { [metaId]: { hechos: { [n]: 'YYYY-MM-DD' } } }   // ítem n -> fecha en que se hizo
-//   ajustes:  { tema, escalaLectura, github: { token, repo }, notificaciones: { activas, hora } }
+//   ajustes:  { tema, pasoLectura (0-20, como la barrita de Laudes), github: { token, repo }, notificaciones: { activas, hora } }
 
 import { hoyISO } from './fechas.js';
 
@@ -16,7 +16,7 @@ const porDefecto = () => ({
   progreso: {},
   ajustes: {
     tema: 'auto',
-    escalaLectura: 1,
+    pasoLectura: 4,
     github: { token: '', repo: 'lucasague/rutina-datos' },
     notificaciones: { activas: false, hora: '07:00' },
     dispositivo: '',
@@ -50,6 +50,13 @@ function guardar() {
 }
 
 export const obtener = () => estado;
+
+// Tamaño de lectura igual que en Laudes: paso 0-20 (4 por defecto) → escala 0.9-1.28.
+export const PASOS_LECTURA = 20;
+export function escalaLectura(paso = estado.ajustes.pasoLectura) {
+  const p = Math.min(PASOS_LECTURA, Math.max(0, Math.round(Number(paso))));
+  return +(0.9 + (Number.isFinite(p) ? p : 4) / PASOS_LECTURA * (1.28 - 0.9)).toFixed(4);
+}
 export const suscribir = (f) => { oyentes.add(f); return () => oyentes.delete(f); };
 
 // ---------- metas ----------

@@ -83,7 +83,8 @@ async function render() {
   }
   const anterior = document.getElementById('vista');
   if (anterior && anterior._limpiar) anterior._limpiar();
-  if (ultimaRutaBase !== base || !anterior) {
+  const cambioDeRuta = ultimaRutaBase !== base || !anterior;
+  if (cambioDeRuta) {
     raiz.innerHTML = concha(ctx, base === '#/leer' ? '#/leer' : base);
     ultimaRutaBase = base;
   } else {
@@ -92,20 +93,22 @@ async function render() {
   const cont = document.getElementById('vista');
   cont.innerHTML = vista.html;
   if (vista.montar) vista.montar(cont);
-  if (base !== '#/leer') window.scrollTo({ top: 0 });
+  // Solo al cambiar de sección: si se repinta la misma (p. ej. al cambiar un ajuste), no saltar arriba.
+  if (base !== '#/leer' && cambioDeRuta) window.scrollTo({ top: 0 });
   raiz._ctx = ctx;
 }
 
 // Eventos delegados
 raiz.addEventListener('click', (ev) => { vistas.manejarAccion(ev, raiz._ctx).catch((e) => { console.error(e); toast(e.message); }); });
 raiz.addEventListener('change', (ev) => vistas.manejarCambio(ev, raiz._ctx));
+raiz.addEventListener('input', (ev) => vistas.manejarEntrada(ev));
 window.addEventListener('hashchange', render);
 estado.suscribir(() => { if (!location.hash.startsWith('#/leer')) render(); });
 
 async function primerArranque() {
   const est = estado.obtener();
   vistas.aplicarTema(est.ajustes.tema);
-  document.documentElement.style.setProperty('--escala-lectura', est.ajustes.escalaLectura);
+  document.documentElement.style.setProperty('--escala-lectura', estado.escalaLectura());
   if (est.metas.length === 0) {
     try {
       const packs = await listarPacks();

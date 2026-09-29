@@ -154,7 +154,7 @@ export function vistaLeer(ctx, n) {
     <div class="progreso-lectura" id="progresoLectura"></div>
     <div class="lectura__cab">
       <button class="boton-icono" data-ir="#/hoy" aria-label="Volver">${I.atras}</button>
-      <div class="control-letra"><button class="boton-icono" data-letra="-1" aria-label="Letra más pequeña">${I.menos}</button><button class="boton-icono" data-letra="1" aria-label="Letra más grande">${I.mas}</button></div>
+      <label class="control-letra"><span class="control-letra__a">A</span><input type="range" min="0" max="${estado.PASOS_LECTURA}" step="1" value="${ctx.estado.ajustes.pasoLectura}" data-letra aria-label="Tamaño del texto"><span class="control-letra__a control-letra__a--gr">A</span></label>
       ${hayParalelo ? `<button class="boton-icono" data-lang aria-pressed="false" aria-label="Ver el original en ${esc((pack.original && pack.original.nombre) || 'italiano')}">${esc(((pack.original && pack.original.idioma) || 'it').toUpperCase())}</button>` : ''}
     </div>
     <div class="etiqueta etiqueta--seccion" style="--color-seccion:${color}">${esc(seccion)} · ${item.n} de ${pack.items.length}</div>
@@ -379,8 +379,8 @@ export function vistaAjustes(ctx) {
       <div class="etiqueta">Apariencia</div>
       <div class="campo"><div class="campo__txt"><div class="campo__titulo">Tema</div></div>
         <select data-tema><option value="auto" ${a.tema === 'auto' ? 'selected' : ''}>Automático</option><option value="claro" ${a.tema === 'claro' ? 'selected' : ''}>Claro</option><option value="oscuro" ${a.tema === 'oscuro' ? 'selected' : ''}>Oscuro</option></select></div>
-      <div class="campo"><div class="campo__txt"><div class="campo__titulo">Tamaño de lectura</div><div class="campo__desc">${Math.round(a.escalaLectura * 100)}%</div></div>
-        <div class="control-letra"><button class="boton-icono" data-letra="-1">${I.menos}</button><button class="boton-icono" data-letra="1">${I.mas}</button></div></div>
+      <div class="campo"><div class="campo__txt"><div class="campo__titulo">Texto</div><div class="campo__desc">Tamaño de lectura</div></div>
+        <label class="control-letra"><input type="range" min="0" max="${estado.PASOS_LECTURA}" step="1" value="${a.pasoLectura}" data-letra aria-label="Tamaño del texto"><span data-letra-valor>${a.pasoLectura}</span></label></div>
     </div>
 
     <div class="tarjeta bloque">
@@ -409,7 +409,7 @@ export async function manejarAccion(ev, ctx) {
     if (nota) { nota.scrollIntoView({ behavior: 'smooth', block: 'center' }); nota.classList.add('nota-activa'); setTimeout(() => nota.classList.remove('nota-activa'), 1800); }
     return true;
   }
-  const t = ev.target.closest('[data-ir],[data-marcar],[data-desmarcar],[data-toggle],[data-letra],[data-mes],[data-notif],[data-probar],[data-guardar-gh],[data-sync],[data-activar],[data-nueva-meta],[data-exportar],[data-reiniciar]');
+  const t = ev.target.closest('[data-ir],[data-marcar],[data-desmarcar],[data-toggle],[data-mes],[data-notif],[data-probar],[data-guardar-gh],[data-sync],[data-activar],[data-nueva-meta],[data-exportar],[data-reiniciar]');
   if (!t) return false;
   const d = t.dataset;
   const { meta, navegar, toast } = ctx;
@@ -437,13 +437,6 @@ export async function manejarAccion(ev, ctx) {
   }
   if (d.desmarcar !== undefined) { estado.desmarcar(meta.id, Number(d.desmarcar)); sync.programarSubidaProgreso(); navegar(location.hash, true); return true; }
   if (d.ir) { navegar(d.ir); return true; }
-  if (d.letra) {
-    const e = Math.min(1.6, Math.max(0.7, +(ctx.estado.ajustes.escalaLectura + Number(d.letra) * 0.1).toFixed(2)));
-    estado.ajustar({ escalaLectura: e });
-    document.documentElement.style.setProperty('--escala-lectura', e);
-    if (location.hash.startsWith('#/ajustes')) navegar(location.hash, true);
-    return true;
-  }
   if (d.mes) { moverMes(Number(d.mes)); navegar('#/calendario', true); return true; }
   if (d.notif !== undefined) {
     const activas = ctx.estado.ajustes.notificaciones.activas;
@@ -514,8 +507,18 @@ export async function manejarAccion(ev, ctx) {
   return false;
 }
 
+// Mientras se arrastra la barrita del tamaño: se ve al momento, sin repintar la vista.
+export function manejarEntrada(ev) {
+  const t = ev.target;
+  if (!t.matches('[data-letra]')) return;
+  document.documentElement.style.setProperty('--escala-lectura', estado.escalaLectura(t.value));
+  const v = t.parentElement.querySelector('[data-letra-valor]');
+  if (v) v.textContent = t.value;
+}
+
 export function manejarCambio(ev, ctx) {
   const t = ev.target;
+  if (t.matches('[data-letra]')) estado.ajustar({ pasoLectura: Number(t.value) });
   if (t.matches('[data-hora]')) { notif.cambiarHora(t.value).then(() => ctx.toast('Hora guardada: ' + t.value)).catch((e) => ctx.toast(e.message)); }
   if (t.matches('[data-tema]')) { estado.ajustar({ tema: t.value }); aplicarTema(t.value); }
   if (t.matches('[data-importar]') && t.files[0]) {
