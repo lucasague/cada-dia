@@ -330,7 +330,6 @@ p { margin: 0; }
 .lectura__notas li.nota-activa { background: var(--oro-suave); }
 .lectura__pie { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--linea); display: flex; flex-direction: column; gap: 12px; }
 .lectura__hecho { display: flex; align-items: center; gap: 10px; color: var(--exito); font-weight: 600; }
-.lectura__hecho--pendiente { color: var(--tinta-3); font-weight: 500; }
 .lectura__navs { display: flex; justify-content: space-between; gap: 10px; }
 .progreso-lectura { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(90deg, var(--oro), var(--oro-2)); width: 0; z-index: 7; transition: width .1s linear; }
 .control-letra { display: inline-flex; align-items: center; gap: 10px; margin-left: auto; font-size: 13px; color: var(--tinta-2); font-variant-numeric: tabular-nums; }

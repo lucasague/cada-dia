@@ -79,6 +79,7 @@ export function vistaHoy(ctx) {
       <div class="hero__acciones">
         <button class="boton ${hoyHecho ? 'boton--secundario' : 'boton--oro'}" data-ir="#/leer/${itemHoy.n}">${I.libro} ${hoyHecho ? 'Releer' : 'Leer ahora'}</button>
         ${hoyHecho && siguiente ? `<button class="boton boton--secundario" data-ir="#/leer/${siguiente.n}">Adelantar el ${esc(siguiente.titulo)}</button>` : ''}
+        ${!hoyHecho ? `<button class="boton boton--secundario" data-marcar="${itemHoy.n}">${I.check} Ya lo leí</button>` : ''}
       </div>
     </div>`;
   }
@@ -165,7 +166,7 @@ export function vistaLeer(ctx, n) {
     <div class="lectura__pie">
       ${hecho
         ? `<div class="lectura__hecho"><span class="check check--hecho">${I.check}</span> Leído el ${fechaCorta(hechos[item.n])}</div><button class="boton boton--secundario" data-desmarcar="${item.n}">Desmarcar</button>`
-        : `<div class="lectura__hecho lectura__hecho--pendiente" data-fin><span class="check">${I.check}</span> Se marca como leído al llegar al final</div>`}
+        : `<div data-fin><button class="boton boton--oro boton--bloque" data-marcar="${item.n}">${I.check} Marcar como leído</button></div>`}
       <div class="lectura__navs">
         ${ant ? `<button class="boton boton--secundario" data-ir="#/leer/${ant.n}">${I.atras} ${esc(ant.titulo)}</button>` : '<span></span>'}
         ${sig ? `<button class="boton boton--secundario" data-ir="#/leer/${sig.n}">${esc(sig.titulo)} ${I.adelante}</button>` : '<span></span>'}
@@ -183,7 +184,7 @@ export function vistaLeer(ctx, n) {
     };
     window.addEventListener('scroll', alScroll, { passive: true });
 
-    // Se marca como leído solo al llegar al final del texto (orden de Lucas, 29/09/2026): cuando el
+    // Además del botón, se marca solo al llegar al final del texto (Lucas, 29/09/2026): cuando el
     // pie entra en pantalla. Los primeros segundos no cuentan, por si la maquetación aún no está hecha.
     const fin = el.querySelector('[data-fin]');
     let observador = null, recheck = null;
@@ -198,7 +199,7 @@ export function vistaLeer(ctx, n) {
         const yaHoy = Object.values(estado.hechos(meta.id)).includes(hoyISO());
         estado.marcarHecho(meta.id, item.n);
         sync.programarSubidaProgreso();
-        fin.classList.remove('lectura__hecho--pendiente');
+        fin.className = 'lectura__hecho';
         fin.innerHTML = `<span class="check check--hecho check--pop">${I.check}</span> Leído hoy`;
         const r2 = fin.getBoundingClientRect();
         lanzarConfeti({ origen: { x: r2.left + 20, y: r2.top + r2.height / 2 }, cantidad: yaHoy ? 60 : 140 });
@@ -313,7 +314,7 @@ export function vistaLista(ctx) {
         <button class="item ${siguiente && siguiente.n === it.n ? 'item--hoy' : ''}" data-ir="#/leer/${it.n}">
           <div class="item__num">${it.numero}</div>
           <div class="item__cuerpo"><div class="item__titulo">${esc(it.titulo)}</div><div class="item__meta">${hechos[it.n] ? 'Leído el ' + fechaCorta(hechos[it.n]) : siguiente && siguiente.n === it.n ? 'Toca hoy' : esc(extracto(it, 70))}</div></div>
-          ${hechos[it.n] ? `<span class="check check--hecho" data-toggle="${it.n}" role="button" aria-label="Desmarcar">${I.check}</span>` : `<span class="check">${I.check}</span>`}
+          <span class="check ${hechos[it.n] ? 'check--hecho' : ''}" data-toggle="${it.n}" role="button" aria-label="Marcar">${I.check}</span>
         </button>`).join('')}</div>`;
   }).join('')}</div>`;
   const montar = (el) => {
@@ -435,7 +436,7 @@ export async function manejarAccion(ev, ctx) {
     if (nota) { nota.scrollIntoView({ behavior: 'smooth', block: 'center' }); nota.classList.add('nota-activa'); setTimeout(() => nota.classList.remove('nota-activa'), 1800); }
     return true;
   }
-  const t = ev.target.closest('[data-ir],[data-desmarcar],[data-toggle],[data-mes],[data-notif],[data-probar],[data-guardar-gh],[data-sync],[data-activar],[data-nueva-meta],[data-exportar],[data-reiniciar]');
+  const t = ev.target.closest('[data-ir],[data-marcar],[data-desmarcar],[data-toggle],[data-mes],[data-notif],[data-probar],[data-guardar-gh],[data-sync],[data-activar],[data-nueva-meta],[data-exportar],[data-reiniciar]');
   if (!t) return false;
   const d = t.dataset;
   const { meta, navegar, toast } = ctx;
@@ -446,6 +447,19 @@ export async function manejarAccion(ev, ctx) {
     if (estado.estaHecho(meta.id, n)) estado.desmarcar(meta.id, n);
     else { estado.marcarHecho(meta.id, n); t.classList.add('check--pop'); }
     sync.programarSubidaProgreso();
+    return true;
+  }
+  if (d.marcar !== undefined) {
+    const n = Number(d.marcar);
+    const yaHoy = Object.values(estado.hechos(meta.id)).includes(hoyISO());
+    estado.marcarHecho(meta.id, n);
+    sync.programarSubidaProgreso();
+    const r = t.getBoundingClientRect();
+    lanzarConfeti({ origen: { x: r.left + r.width / 2, y: r.top + r.height / 2 }, cantidad: yaHoy ? 60 : 140 });
+    if (navigator.vibrate) navigator.vibrate([30, 40, 30]);
+    const total = ctx.pack.items.length, hechosN = Object.keys(estado.hechos(meta.id)).length;
+    toast(hechosN === total ? '¡Meta completada!' : yaHoy ? 'Otro más. Vas adelantado.' : '¡Hecho! Un día más en la racha.');
+    setTimeout(() => navegar('#/hoy'), 900);
     return true;
   }
   if (d.desmarcar !== undefined) { estado.desmarcar(meta.id, Number(d.desmarcar)); sync.programarSubidaProgreso(); navegar(location.hash, true); return true; }
