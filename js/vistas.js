@@ -458,7 +458,7 @@ export function vistaAjustes(ctx) {
     <div class="tarjeta bloque">
       <div class="etiqueta">Datos</div>
       <div class="fila mt"><button class="boton boton--secundario" data-exportar>Exportar copia</button><label class="boton boton--secundario">Importar<input type="file" accept="application/json" data-importar class="oculto"></label><button class="boton boton--peligro" data-reiniciar>Borrar todo</button></div>
-      <p class="nota mt">Versión ${esc(window.__CADADIA_VERSION || '1')} · <a href="https://github.com/lucasague/rutina" target="_blank" rel="noopener">código</a></p>
+      <p class="nota mt">Versión ${esc(window.__CADADIA_VERSION || '1')} · <a href="https://github.com/lucasague/cadadia" target="_blank" rel="noopener">código</a></p>
     </div>
   </div>`;
 

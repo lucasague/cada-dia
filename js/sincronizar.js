@@ -6,6 +6,7 @@
 
 import * as estado from './estado.js';
 import { actualizarJSON, leerJSON } from './github.js';
+import { listarPacks } from './contenido.js';
 
 const RUTA_PROGRESO = 'progreso.json';
 const RUTA_SUSCRIPCIONES = 'suscripciones.json';
@@ -84,11 +85,16 @@ export async function bajarProgreso() {
   if (!datos) return false;
   // Metas que existen en remoto y no aquí, de un pack que aquí no hay (si el pack ya está, se casan).
   const local = estado.obtener();
+  // Metas remotas de paquetes que ya no existen (p. ej. la Comedia retirada el 31/10/2026): se ignoran.
+  const conocidos = new Set((await listarPacks()).map((p) => p.id));
+  const metasRemotas = (datos.metas || []).filter((m) => conocidos.has(m.pack));
+  const idsValidos = new Set(metasRemotas.map((m) => m.id));
+  datos.progreso = Object.fromEntries(Object.entries(datos.progreso || {}).filter(([id]) => idsValidos.has(id)));
   let nuevasMetas = false;
-  for (const m of datos.metas || []) {
+  for (const m of metasRemotas) {
     if (!local.metas.some((x) => x.id === m.id || x.pack === m.pack)) { local.metas.push({ ...m, activa: local.metas.length === 0 }); nuevasMetas = true; }
   }
-  const cambio = estado.fusionarProgreso(progresoCasado(datos.progreso, datos.metas));
+  const cambio = estado.fusionarProgreso(progresoCasado(datos.progreso, metasRemotas));
   if (nuevasMetas) estado.ajustar({});
   return cambio || nuevasMetas;
 }

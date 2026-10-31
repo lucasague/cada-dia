@@ -1,20 +1,12 @@
 {
  "packs": [
   {
-   "id": "divina-comedia",
-   "titulo": "La Divina Comedia",
-   "autor": "Dante Alighieri",
-   "descripcion": "Un canto al día. 100 cantos en verso: Infierno, Purgatorio y Paraíso. Traducción en tercetos rimados de Bartolomé Mitre (1922), con el italiano de Dante al deslizar.",
-   "unidad": "canto",
-   "total": 100
-  },
-  {
-   "id": "divina-comedia-prosa",
-   "titulo": "La Divina Comedia (prosa)",
-   "autor": "Dante Alighieri",
-   "descripcion": "Un canto al día. Traducción en prosa de Manuel Aranda y Sanjuán (1868).",
-   "unidad": "canto",
-   "total": 100
+   "id": "eneagrama",
+   "titulo": "La sabiduría del eneagrama",
+   "autor": "Don Richard Riso y Russ Hudson",
+   "descripcion": "Un fragmento al día durante un mes: 30 lecturas de tamaño parejo, cortadas en los límites naturales de cada capítulo.",
+   "unidad": "fragmento",
+   "total": 30
   }
  ]
 }

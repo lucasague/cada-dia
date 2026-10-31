@@ -1,7 +1,7 @@
 {
   "name": "Cada día",
   "short_name": "Cada día",
-  "description": "Una cosa cada día: un canto de la Divina Comedia hoy; lo que quieras mañana.",
+  "description": "Una cosa cada día: un fragmento de lectura hoy; lo que quieras mañana.",
   "lang": "es",
   "start_url": "./#/hoy",
   "scope": "./",

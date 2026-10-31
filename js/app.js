@@ -109,6 +109,11 @@ async function primerArranque() {
   const est = estado.obtener();
   vistas.aplicarTema(est.ajustes.tema);
   document.documentElement.style.setProperty('--escala-lectura', estado.escalaLectura());
+  try {
+    // Metas de paquetes retirados (la Comedia, 31/10/2026): fuera, con su progreso.
+    const conocidos = new Set((await listarPacks()).map((p) => p.id));
+    est.metas.filter((m) => !conocidos.has(m.pack)).forEach((m) => estado.borrarMeta(m.id));
+  } catch (e) { console.error(e); }
   if (est.metas.length === 0) {
     try {
       const packs = await listarPacks();
