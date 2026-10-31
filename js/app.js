@@ -5,6 +5,7 @@ import { hoyISO, fechaLarga, calcularRachas } from './fechas.js';
 import { I } from './iconos.js';
 import * as vistas from './vistas.js';
 import * as sync from './sincronizar.js';
+import { vistaSubrayados } from './subrayar.js';
 
 window.__CADADIA_VERSION = '1.0.0';
 
@@ -13,6 +14,7 @@ const RUTAS = [
   { hash: '#/hoy', titulo: 'Hoy', icono: I.hoy },
   { hash: '#/lista', titulo: 'Cantos', icono: I.lista },
   { hash: '#/calendario', titulo: 'Calendario', icono: I.calendario },
+  { hash: '#/subrayados', titulo: 'Subrayados', icono: I.subrayar },
   { hash: '#/ajustes', titulo: 'Ajustes', icono: I.ajustes },
 ];
 
@@ -78,6 +80,7 @@ async function render() {
     case '#/leer': vista = vistas.vistaLeer(ctx, arg); break;
     case '#/lista': vista = vistas.vistaLista(ctx); break;
     case '#/calendario': vista = vistas.vistaCalendario(ctx); break;
+    case '#/subrayados': vista = vistaSubrayados(ctx); break;
     case '#/ajustes': vista = vistas.vistaAjustes(ctx); break;
     default: vista = vistas.vistaHoy(ctx);
   }

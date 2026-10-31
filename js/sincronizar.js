@@ -61,7 +61,8 @@ export async function subirProgreso() {
   const local = estado.obtener();
   await actualizarJSON(cfg(), RUTA_PROGRESO, (remoto) => {
     // Unión: gana la fecha más antigua por ítem. Después fusionamos lo remoto en local también.
-    const salida = { actualizado: new Date().toISOString(), metas: local.metas, progreso: {} };
+    estado.fusionarSubrayados(remoto && remoto.subrayados);
+    const salida = { actualizado: new Date().toISOString(), metas: local.metas, progreso: {}, subrayados: estado.obtener().subrayados || [] };
     const fuentes = [remoto && progresoCasado(remoto.progreso, remoto.metas), local.progreso];
     for (const fuente of fuentes) {
       if (!fuente) continue;
@@ -94,7 +95,8 @@ export async function bajarProgreso() {
   for (const m of metasRemotas) {
     if (!local.metas.some((x) => x.id === m.id || x.pack === m.pack)) { local.metas.push({ ...m, activa: local.metas.length === 0 }); nuevasMetas = true; }
   }
-  const cambio = estado.fusionarProgreso(progresoCasado(datos.progreso, metasRemotas));
+  const cambioSub = estado.fusionarSubrayados(datos.subrayados);
+  const cambio = estado.fusionarProgreso(progresoCasado(datos.progreso, metasRemotas)) || cambioSub;
   if (nuevasMetas) estado.ajustar({});
   return cambio || nuevasMetas;
 }

@@ -9,6 +9,7 @@ import { lanzarConfeti } from './confeti.js';
 import * as notif from './notificaciones.js';
 import * as sync from './sincronizar.js';
 import { comprobarToken } from './github.js';
+import { parrafoConMarcas, montarSubrayado } from './subrayar.js';
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Marcadores [n] de nota al pie -> superíndice enlazado a la nota.
@@ -179,7 +180,8 @@ export function vistaLeer(ctx, n) {
       if (hayParalelo) {
         return `<div class="paralelo"><div class="paralelo__pista"><div class="paralelo__cara paralelo__cara--original" lang="it">${conNotas(esc(item.parrafos_original[i]))}</div><div class="paralelo__cara" lang="es">${conNotas(esc(p))}</div></div></div>`;
       }
-      return `<p>${conNotas(esc(p))}</p>`;
+      const hs = estado.subrayados(pack.id).filter((h) => h.n === item.n && h.p === i);
+      return `<p data-p="${i}">${parrafoConMarcas(p, hs, (t) => conNotas(esc(t)))}</p>`;
     }
   }).join('');
 
@@ -329,7 +331,8 @@ export function vistaLeer(ctx, n) {
     }
 
     // Los listeners del paralelo cuelgan de textoEl y se van con la vista.
-    el._limpiar = () => { window.removeEventListener('scroll', alScroll); if (observador) observador.disconnect(); clearTimeout(recheck); };
+    const limpiarSub = montarSubrayado(el, ctx, item, (t) => conNotas(esc(t)));
+    el._limpiar = () => { window.removeEventListener('scroll', alScroll); if (observador) observador.disconnect(); clearTimeout(recheck); limpiarSub(); };
   };
   return { html, montar };
 }

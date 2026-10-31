@@ -14,6 +14,7 @@ const porDefecto = () => ({
   version: 1,
   metas: [],
   progreso: {},
+  subrayados: [],
   ajustes: {
     tema: 'auto',
     pasoLectura: 4,
@@ -121,6 +122,45 @@ export function fusionarProgreso(remoto) {
       const local = estado.progreso[metaId].hechos[n];
       if (!local || fecha < local) { estado.progreso[metaId].hechos[n] = fecha; cambios = true; }
     }
+  }
+  if (cambios) guardar();
+  return cambios;
+}
+
+// ---------- subrayados ----------
+// { id, pack, n, p, ini, fin, texto, clase: 'neutro'|'si'|'no', tipo: número|null, t: ISO de última modificación, borrado? }
+// p = índice de párrafo dentro del ítem; ini/fin = posición en el texto del párrafo. Los borrados se
+// quedan con borrado:true para que la sincronización no los resucite desde otro dispositivo.
+export const subrayados = (pack) => (estado.subrayados || []).filter((h) => !h.borrado && (!pack || h.pack === pack));
+export function guardarSubrayado(h) {
+  if (!estado.subrayados) estado.subrayados = [];
+  const ahora = new Date().toISOString();
+  // lo que se solape en el mismo párrafo se funde en uno (gana la clase nueva)
+  let { ini, fin } = h;
+  for (const o of estado.subrayados) {
+    if (o.borrado || o.id === h.id || o.pack !== h.pack || o.n !== h.n || o.p !== h.p) continue;
+    if (o.ini < fin && o.fin > ini) { ini = Math.min(ini, o.ini); fin = Math.max(fin, o.fin); o.borrado = true; o.t = ahora; }
+  }
+  const nuevo = { ...h, ini, fin, t: ahora };
+  const previo = estado.subrayados.findIndex((o) => o.id === h.id);
+  if (previo >= 0) estado.subrayados[previo] = nuevo; else estado.subrayados.push(nuevo);
+  guardar();
+  return nuevo;
+}
+export function borrarSubrayado(id) {
+  const h = (estado.subrayados || []).find((o) => o.id === id);
+  if (h) { h.borrado = true; h.t = new Date().toISOString(); guardar(); }
+}
+/** Une subrayados de otro dispositivo: por id, gana el más reciente. Devuelve true si cambió algo. */
+export function fusionarSubrayados(remotos) {
+  if (!Array.isArray(remotos)) return false;
+  if (!estado.subrayados) estado.subrayados = [];
+  let cambios = false;
+  for (const r of remotos) {
+    if (!r || !r.id) continue;
+    const i = estado.subrayados.findIndex((o) => o.id === r.id);
+    if (i < 0) { estado.subrayados.push(r); cambios = true; }
+    else if ((r.t || '') > (estado.subrayados[i].t || '')) { estado.subrayados[i] = r; cambios = true; }
   }
   if (cambios) guardar();
   return cambios;
